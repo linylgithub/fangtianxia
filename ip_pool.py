@@ -16,9 +16,26 @@ from model import IPProxy, Session
 class IPProxySpider(object):
     """ip代理类"""
 
-    def __init__(self):
-        self.url_list = set()
-        self.session = Session()
+    def __init__(self, base_url, host):
+        self.new_url_list = set()
+        self.old_url_list = set()
+        self.new_url_list.add(base_url)
+        self.session = Session()  
+        self.base_url =  host     
+
+    def run(self):
+        url = self.new_url_list.pop()
+        proxy = self.get_proxy
+        page = self.get_page(url, proxy)
+        ip_count = 0
+        if page:
+            self.old_url_list.add(url)
+            ip_count = self.parse_page(page, url)
+        return ip_count
+
+
+    def get_url(self, page):
+        pass
 
     def get_page(self, url, proxy=None):
         """
@@ -41,7 +58,14 @@ class IPProxySpider(object):
             logging.error(e)
             return None
 
-    def get_ip_list(self, page, url):
+    def get_proxy(self):
+        """
+        获取代理
+        :param: 
+        :return: 
+        """   
+
+    def parse_page(self, page, url):
         """
         解析页面
         :param: 
@@ -49,7 +73,12 @@ class IPProxySpider(object):
         """  
         soup = BeautifulSoup(page, 'lxml') 
         trs = soup.find('table', id="ip_list").find_all('tr')
-        ip_list = []
+        urls = soup.find('div', _class="pagaination").find_all('a')
+        for _url in urls:
+            new_url = self.base_url + _url.href
+            self.new_url_list.add(new_url)
+        ip_count = 0
+        proxy_list = []
         for tr in trs[1:]:
             tds = tr.find_all('td')
             # print([item for item in tr.contents])
@@ -57,19 +86,17 @@ class IPProxySpider(object):
             port = tds[2].text
             procotol = tds[5].text or 'http'
             proxy = (ip, port, procotol)
+            if self.check_ip_saved(proxy):
+                continue
             if self.check_ip_use(proxy):
-                ip_list.append(proxy)
-        return ip_list
-
-    def save_ip(self, ip_list, url):
-        """
-        解析页面
-        :param: 
-        :return: 
-        """ 
-        ip_proxy = IPProxy(ip=proxy[0], port=proxy[1], procotol=[2], source=url)
-        self.session.add(ip_proxy)
-
+                # self.save_ip(proxy, url)
+                proxy_list.append(IPProxy(ip=proxy[0], port=proxy[1], procotol=proxy[2], source=url))
+                ip_count += 1
+                print(proxy)
+                # ip_list.append(proxy)
+        self.session.add_all(proxy_list)
+        self.session.commit()
+        return ip_count
 
     def check_ip_use(self, proxy):
         """
@@ -97,16 +124,22 @@ class IPProxySpider(object):
         :param: 
         :return: 
         """
+        proxy = self.session.query(IPProxy).filter(IPProxy.ip == proxy[0], IPProxy.port == proxy[1], 
+                    IPProxy.procotol == proxy[2], IPProxy.status == 'normal').one_or_none()
+        if proxy:
+            return True
+        else:
+            return False
         
 
 
 if __name__ == "__main__":
-    base_url = "https://www.xicidaili.com/nn/2"
+    base_url = "https://www.xicidaili.com/nn/1"
+    host = "https://www.xicidaili.com"
     proxy = ("120.83.109.180", "9999", "http")
-    ip_proxy = IPProxySpider()
-    # page = ip_proxy.get_page(base_url)
-    page = ip_proxy.get_page(base_url, proxy)
+    spider = IPProxySpider(base_url, host)
+    # page = spider.get_page(base_url)
+    page = spider.get_page(base_url, proxy)
     if page:
-        ip_list = ip_proxy.get_ip_list(page)
-    # print(page.code)
-        print(len(ip_list))
+        ip_count = spider.parse_page(page ,base_url)
+        print(ip_count)

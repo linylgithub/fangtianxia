@@ -35,7 +35,7 @@ class IPProxy(Base):
     source = Column(String(128), comment="代理ip来源")
 
     def __repr__(self):
-        return f"""<IPProxy(url='{self.url}', port='{self.port}', status='{self.status}',
+        return f"""<IPProxy(ip='{self.ip}', port='{self.port}', status='{self.status}',
          build_time='{self.build_time}')>"""
 
 
@@ -61,13 +61,17 @@ class LouPan(Base):
 
 if __name__ == "__main__":
     # engine = create_engine('mysql+mysqldb://spider:spider123@120.79.248.110:3306/spiderdb')
-    engine = create_engine(DB_URL, echo=True)
+    # engine = create_engine(DB_URL, echo=True)
     metadata.drop_all(engine)
     metadata.create_all(engine)
-    ip_test = IPProxy(ip='127.0.0.1', port='8989', source="测试")
+    # ip_test = IPProxy(ip='127.0.0.1', port='1087', procotol='http', source="测试")
     session = Session()
-    session.add(ip_test)
+    # session.add(ip_test)
     session.commit()
+
+    proxy = session.query(IPProxy).filter(IPProxy.ip == '127.0.0.1',
+                     IPProxy.port=='1087').one_or_none()
+    # print(proxy.ip)
 
 
 
