@@ -24,18 +24,24 @@ class IPProxySpider(object):
         self.base_url =  host     
 
     def run(self):
-        url = self.new_url_list.pop()
-        proxy = self.get_proxy
-        page = self.get_page(url, proxy)
-        ip_count = 0
-        if page:
-            self.old_url_list.add(url)
-            ip_count = self.parse_page(page, url)
+        while self.new_url_list:
+            url = self.new_url_list.pop()
+            proxy = self.get_proxy
+            page = self.get_page(url, proxy)
+            ip_count = 0
+            if page:
+                self.old_url_list.add(url)
+                ip_count = self.parse_page(page, url)
         return ip_count
 
-
-    def get_url(self, page):
-        pass
+    def get_proxy(self):
+        """
+        获取代理
+        :param: 
+        :return: 
+        """ 
+        proxy_list = self.session.query(IPProxy).filter(
+            IPProxy.status == 'normal').order_by(IPProxy.build_time)
 
     def get_page(self, url, proxy=None):
         """
@@ -57,13 +63,6 @@ class IPProxySpider(object):
         except Exception as e:
             logging.error(e)
             return None
-
-    def get_proxy(self):
-        """
-        获取代理
-        :param: 
-        :return: 
-        """   
 
     def parse_page(self, page, url):
         """
